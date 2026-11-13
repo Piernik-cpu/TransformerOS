@@ -1,0 +1,12 @@
+[Unit]
+Description=Mount ASUS T100TAS microSD card (EXTRA)
+After=local-fs-pre.target
+
+[Mount]
+What=UUID=50e09466-61d9-4b04-9445-161548f62afc
+Where=/var/mnt/EXTRA
+Type=auto
+Options=defaults,noatime,nofail,x-gvfs-show,x-gvfs-name=EXTRA
+
+[Install]
+WantedBy=local-fs.target

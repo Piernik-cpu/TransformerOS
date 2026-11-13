@@ -10,6 +10,8 @@ import datetime
 import glob
 import json
 import os
+import pwd
+import pty
 import socket
 import struct
 import subprocess
@@ -208,11 +210,43 @@ button.power-btn {
 """
 
 
+def detect_default_user() -> str:
+    env_u = os.environ.get("TRANSFORMEROS_USER") or os.environ.get("USER")
+    if env_u and env_u not in ("root", "greeter"):
+        return env_u
+    for entry in sorted(pwd.getpwall(), key=lambda p: p.pw_uid):
+        if 1000 <= entry.pw_uid < 60000 and entry.pw_shell not in ("/sbin/nologin", "/bin/false", "/usr/sbin/nologin"):
+            return entry.pw_name
+    return "piergi"
+
+
+def verify_user_password(username: str, password: str) -> bool:
+    """Verify user password via unix_chkpwd/su inside a pseudo-terminal."""
+    master, slave = pty.openpty()
+    proc = subprocess.Popen(
+        ["su", "-c", "true", username],
+        stdin=slave,
+        stdout=slave,
+        stderr=slave,
+        close_fds=True,
+    )
+    os.close(slave)
+    try:
+        os.write(master, (password + "\n").encode("utf-8"))
+        rc = proc.wait(timeout=10)
+        return rc == 0
+    except Exception:
+        proc.kill()
+        return False
+    finally:
+        os.close(master)
+
+
 class GreeterWindow(Gtk.ApplicationWindow):
     def __init__(self, app: Gtk.Application, lock_mode: bool = False):
         super().__init__(application=app, title="TransformerOS Login")
         self.lock_mode = lock_mode
-        self.default_user = os.environ.get("TRANSFORMEROS_USER", "piergi")
+        self.default_user = detect_default_user()
         self.shift_active = False
         self.docked = has_dock_or_keyboard()
         self.manual_osk = False
@@ -415,13 +449,7 @@ class GreeterWindow(Gtk.ApplicationWindow):
         self.login_btn.set_sensitive(False)
 
         if self.lock_mode:
-            res = subprocess.run(
-                ["su", "-c", "true", self.default_user],
-                input=(pw + "\n").encode("utf-8"),
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            if res.returncode == 0:
+            if verify_user_password(self.default_user, pw):
                 self.get_application().quit()
                 return
             self.error_label.set_text("Incorrect password")

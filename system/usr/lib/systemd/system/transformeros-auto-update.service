@@ -8,4 +8,5 @@ ConditionACPower=true
 Type=oneshot
 Nice=19
 IOSchedulingClass=idle
+ExecCondition=/bin/sh -c '! grep -qs "^game_mode=true$" /home/*/.config/transformeros/config.kv'
 ExecStart=/usr/bin/bootc upgrade

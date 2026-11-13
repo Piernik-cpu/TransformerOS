@@ -4,7 +4,7 @@
 # =============================================================================
 FROM quay.io/fedora/fedora-bootc:45 AS builder
 
-RUN dnf5 install -y --setopt=install_weak_deps=False \
+RUN dnf5 install -y --setopt=ip_resolve=ipv4 --setopt=install_weak_deps=False \
         rust \
         cargo \
         gcc \
@@ -13,6 +13,7 @@ RUN dnf5 install -y --setopt=install_weak_deps=False \
         pkgconf-pkg-config \
         wayland-devel \
         wayland-protocols-devel \
+        wlr-protocols-devel \
         cairo-devel \
         pango-devel \
         libxkbcommon-devel && \
@@ -23,6 +24,18 @@ RUN rustc -O --edition=2021 -C strip=symbols \
         /src/transformerd/src/main.rs \
         -o /out/transformerd && \
     ln -sf transformerd /out/transformerdctl
+
+RUN wayland-scanner client-header \
+        /usr/share/wlr-protocols/unstable/wlr-foreign-toplevel-management-unstable-v1.xml \
+        /src/transformerd/wlr-foreign-toplevel-management-unstable-v1-client-protocol.h && \
+    wayland-scanner private-code \
+        /usr/share/wlr-protocols/unstable/wlr-foreign-toplevel-management-unstable-v1.xml \
+        /src/transformerd/wlr-foreign-toplevel-management-unstable-v1-protocol.c && \
+    gcc -O2 -Wall -Wextra -I/src/transformerd \
+        /src/transformerd/t100-window-ctl.c \
+        /src/transformerd/wlr-foreign-toplevel-management-unstable-v1-protocol.c \
+        -lwayland-client -o /out/t100-window-ctl && \
+    strip /out/t100-window-ctl
 
 RUN git clone --depth 1 https://github.com/jjsullivan5196/wvkbd.git /src/wvkbd && \
     make -C /src/wvkbd wvkbd-mobintl -j"$(nproc)" && \
@@ -40,9 +53,9 @@ LABEL org.opencontainers.image.title="TransformerOS" \
       containers.bootc="1"
 
 # 1. Enable RPM Fusion Free (for Intel Bay Trail i965 VA-API driver) and install packages
-RUN dnf5 install -y --setopt=install_weak_deps=False \
+RUN dnf5 install -y --setopt=ip_resolve=ipv4 --setopt=install_weak_deps=False \
         "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-45.noarch.rpm" || true && \
-    dnf5 install -y --setopt=install_weak_deps=False \
+    dnf5 install -y --setopt=ip_resolve=ipv4 --setopt=install_weak_deps=False \
         shim-ia32 \
         grub2-efi-ia32 \
         grub2-efi-ia32-cdboot \
@@ -119,14 +132,15 @@ RUN dnf5 install -y --setopt=install_weak_deps=False \
         flatpak \
         fontconfig \
         google-noto-sans-fonts && \
-    (dnf5 install -y --setopt=install_weak_deps=False intel-vaapi-driver || \
-     dnf5 install -y --setopt=install_weak_deps=False libva-intel-driver || true) && \
+    (dnf5 install -y --setopt=ip_resolve=ipv4 --setopt=install_weak_deps=False intel-vaapi-driver || \
+     dnf5 install -y --setopt=ip_resolve=ipv4 --setopt=install_weak_deps=False libva-intel-driver || true) && \
     dnf5 clean all && \
     rm -rf /var/cache/dnf /var/lib/dnf/repos
 
-# 2. Install compiled transformerd + wvkbd-mobintl binaries
+# 2. Install compiled transformerd, t100-window-ctl, and wvkbd-mobintl binaries
 COPY --from=builder /out/transformerd /usr/bin/transformerd
 COPY --from=builder /out/transformerdctl /usr/bin/transformerdctl
+COPY --from=builder /out/t100-window-ctl /usr/bin/t100-window-ctl
 COPY --from=builder /out/wvkbd-mobintl /usr/bin/wvkbd-mobintl
 
 # 3. Install ASUS T100TAS Broadcom Bluetooth patch & Wi-Fi NVRAM firmware
@@ -139,26 +153,30 @@ COPY system/ /
 # 5. Install TransformerOS Shell, Adaptive Greeter, Lock Screen, Labwc & Waybar configs
 COPY shell/transformer-greeter.py /usr/bin/transformer-greeter
 COPY shell/transformer-greeter-session.sh /usr/bin/transformer-greeter-session
-COPY shell/transformer-shell.py /usr/bin/transformer-shell
+COPY shell/transformer-shell-ipc.sh /usr/bin/transformer-shell
 COPY shell/transformer-session.sh /usr/bin/transformer-session
+COPY shell/labwc/ /usr/share/transformeros/labwc/
 COPY shell/labwc/ /etc/skel/.config/labwc/
 COPY shell/waybar/ /etc/skel/.config/waybar/
 COPY shell/quickshell/ /etc/xdg/quickshell/transformeros/
-COPY shell/firefox/t100tas-prefs.js /usr/lib64/firefox/defaults/pref/t100tas-prefs.js
+COPY shell/firefox/t100tas-prefs.js /usr/lib64/firefox/browser/defaults/preferences/99-t100tas-prefs.js
 
 RUN chmod 0755 \
         /usr/bin/transformerd \
+        /usr/bin/t100-window-ctl \
         /usr/bin/wvkbd-mobintl \
         /usr/bin/transformer-greeter \
         /usr/bin/transformer-greeter-session \
         /usr/bin/transformer-shell \
         /usr/bin/transformer-session \
+        /usr/share/transformeros/labwc/autostart \
         /etc/skel/.config/labwc/autostart && \
+    cp -a /usr/share/transformeros/labwc/rc-docked.xml /usr/share/transformeros/labwc/rc.xml && \
     cp -a /etc/skel/.config/labwc/rc-docked.xml /etc/skel/.config/labwc/rc.xml && \
     # Ensure greeter user has video/input group access for Wayland DRM + touch + backlight
     (getent passwd greeter >/dev/null || useradd -r -M -d /var/lib/greetd -s /sbin/nologin greeter) && \
     usermod -aG video,input greeter || true && \
-    # Enable core services
+    # Enable core services and microSD automount
     systemctl enable \
         greetd.service \
         earlyoom.service \
@@ -168,6 +186,7 @@ RUN chmod 0755 \
         bluetooth.service \
         sshd.service \
         fstrim.timer \
+        var-mnt-EXTRA.mount \
         transformeros-auto-update.timer && \
     systemctl disable \
         NetworkManager-wait-online.service \
@@ -180,6 +199,7 @@ RUN set -euo pipefail; \
         rm -rf /usr/lib/bootupd/updates && \
         bootupctl backend generate-update-metadata / || true; \
     fi; \
+    mkdir -p /var/roothome && chmod 0700 /var/roothome; \
     KVER="$(cd /usr/lib/modules && ls -1 | head -n 1)"; \
     dracut --force --no-hostonly --zstd --kver "$KVER" "/usr/lib/modules/$KVER/initramfs.img"; \
     rm -rf /boot/grub2 /run/dnf /run/selinux-policy /tmp/* /var/tmp/* /var/log/dnf5* /var/cache/* 2>/dev/null || true

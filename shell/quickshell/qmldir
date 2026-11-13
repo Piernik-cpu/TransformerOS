@@ -1,0 +1,11 @@
+singleton Theme 1.0 Theme.qml
+singleton StateBridge 1.0 StateBridge.qml
+TouchKeyboard 1.0 TouchKeyboard.qml
+TopBar 1.0 TopBar.qml
+BottomNavBar 1.0 BottomNavBar.qml
+QuickSettingsDrawer 1.0 QuickSettingsDrawer.qml
+AppGridOverlay 1.0 AppGridOverlay.qml
+RecentsOverlay 1.0 RecentsOverlay.qml
+NotificationsOverlay 1.0 NotificationsOverlay.qml
+PolkitOverlay 1.0 PolkitOverlay.qml
+LockScreen 1.0 LockScreen.qml

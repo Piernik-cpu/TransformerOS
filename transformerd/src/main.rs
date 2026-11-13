@@ -51,6 +51,7 @@ struct RuntimeState {
     power_profile: String,
     game_mode: bool,
     osk_visible: bool,
+    bt_powered: bool,
     update_status: String,
 }
 
@@ -361,6 +362,29 @@ fn toggle_osk() -> bool {
     true
 }
 
+fn has_bluetooth_powered() -> bool {
+    if let Ok(entries) = fs::read_dir("/sys/class/rfkill") {
+        let mut saw_bt = false;
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if read_trimmed(&p.join("type")).as_deref() == Some("bluetooth") {
+                saw_bt = true;
+                let soft = read_trimmed(&p.join("soft")).unwrap_or_default();
+                let hard = read_trimmed(&p.join("hard")).unwrap_or_default();
+                if soft == "0" && hard == "0" {
+                    return true;
+                }
+            }
+        }
+        if saw_bt {
+            return false;
+        }
+    }
+    fs::read_dir("/sys/class/bluetooth")
+        .map(|mut d| d.next().is_some())
+        .unwrap_or(false)
+}
+
 fn apply_labwc_mode(mode: &str) {
     let Ok(home) = env::var("HOME") else {
         return;
@@ -382,7 +406,14 @@ fn apply_labwc_mode(mode: &str) {
                 .status();
         }
     }
-    // Signal Waybar custom modules & TransformerOS Shell
+    if mode == "tablet" {
+        let _ = Command::new("t100-window-ctl")
+            .arg("maximize-all")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
+    // Signal Waybar custom modules if active
     let _ = Command::new("pkill")
         .args(["-RTMIN+8", "waybar"])
         .stdout(Stdio::null())
@@ -432,6 +463,7 @@ fn write_state(st: &RuntimeState) {
             "  \"power_profile\": \"{}\",\n",
             "  \"game_mode\": {},\n",
             "  \"osk_visible\": {},\n",
+            "  \"bt_powered\": {},\n",
             "  \"update_status\": \"{}\"\n",
             "}}\n"
         ),
@@ -451,6 +483,7 @@ fn write_state(st: &RuntimeState) {
         st.power_profile,
         st.game_mode,
         st.osk_visible,
+        st.bt_powered,
         st.update_status
     );
     let tmp = runtime_dir().join("state.json.tmp");
@@ -517,6 +550,7 @@ fn compute_state(cfg: &ConfigState, prev_orient: &str, ema_lux: f64) -> RuntimeS
         power_profile,
         game_mode: cfg.game_mode,
         osk_visible: effective_mode == "tablet",
+        bt_powered: has_bluetooth_powered(),
         update_status,
     }
 }
@@ -525,18 +559,28 @@ fn run_daemon() {
     let mut prev_mode = String::new();
     let mut prev_orient = "normal".to_string();
     let mut prev_power = String::new();
-    let mut prev_brightness: u32 = 0;
+    let mut prev_brightness: u32 = get_backlight_pct();
+    let mut last_applied_brightness: u32 = prev_brightness;
     let mut ema_lux: f64 = read_ambient_lux().unwrap_or(80.0);
     let mut last_light_apply = Instant::now() - Duration::from_secs(10);
     let mut low_bat_notified = false;
 
     loop {
-        let cfg = load_config();
+        let mut cfg = load_config();
         if let Some(lux) = read_ambient_lux() {
             ema_lux = ema_lux * 0.75 + lux * 0.25;
         }
 
         let mut st = compute_state(&cfg, &prev_orient, ema_lux);
+
+        // Preserve external manual brightness changes cleanly by adapting offset
+        if cfg.auto_brightness && st.brightness_pct.abs_diff(last_applied_brightness) >= 4 {
+            let base = lux_to_brightness_pct(ema_lux, 0) as i32;
+            cfg.brightness_offset = (st.brightness_pct as i32 - base).clamp(-60, 60);
+            save_config(&cfg);
+            last_applied_brightness = st.brightness_pct;
+            prev_brightness = st.brightness_pct;
+        }
 
         if st.effective_mode != prev_mode {
             apply_labwc_mode(&st.effective_mode);
@@ -590,6 +634,7 @@ fn run_daemon() {
             if target_b.abs_diff(prev_brightness) >= 4 {
                 set_backlight_pct(target_b);
                 prev_brightness = target_b;
+                last_applied_brightness = target_b;
                 st.brightness_pct = target_b;
                 last_light_apply = Instant::now();
             }
@@ -605,11 +650,11 @@ fn print_waybar_mode() {
     let st = compute_state(&cfg, "normal", 80.0);
     if st.effective_mode == "tablet" {
         println!(
-            "{{\"text\":\"󰓶 Tablet\",\"class\":\"tablet\",\"tooltip\":\"Tablet Mode active (tap to switch or open Quick Settings)\"}}"
+            "{{\"text\":\"Tablet\",\"class\":\"tablet\",\"tooltip\":\"Tablet Mode active (tap to switch or open Quick Settings)\"}}"
         );
     } else {
         println!(
-            "{{\"text\":\"󰌢 Laptop\",\"class\":\"docked\",\"tooltip\":\"Laptop Mode active (dock attached)\"}}"
+            "{{\"text\":\"Laptop\",\"class\":\"docked\",\"tooltip\":\"Laptop Mode active (dock attached)\"}}"
         );
     }
 }
@@ -619,15 +664,15 @@ fn print_waybar_rotate() {
     let st = compute_state(&cfg, "normal", 80.0);
     if st.rotation_locked {
         println!(
-            "{{\"text\":\"󰍁 Rot:Lock\",\"class\":\"locked\",\"tooltip\":\"Rotation locked (tap to unlock)\"}}"
+            "{{\"text\":\"🔒 Rot:Lock\",\"class\":\"locked\",\"tooltip\":\"Rotation locked (tap to unlock)\"}}"
         );
     } else if st.effective_mode == "docked" {
         println!(
-            "{{\"text\":\"󰌢 Rot:Dock\",\"class\":\"docked\",\"tooltip\":\"Locked to landscape while docked\"}}"
+            "{{\"text\":\"Rot:Dock\",\"class\":\"docked\",\"tooltip\":\"Locked to landscape while docked\"}}"
         );
     } else {
         println!(
-            "{{\"text\":\"ScreenRotation Rot:Auto\",\"class\":\"auto\",\"tooltip\":\"Auto-rotate enabled (tap to lock)\"}}"
+            "{{\"text\":\"↻ Rot:Auto\",\"class\":\"auto\",\"tooltip\":\"Auto-rotate enabled (tap to lock)\"}}"
         );
     }
 }
@@ -636,11 +681,11 @@ fn print_waybar_gamemode() {
     let cfg = load_config();
     if cfg.game_mode {
         println!(
-            "{{\"text\":\"󰊗 Game:ON\",\"class\":\"active\",\"tooltip\":\"Game Mode ON (Performance profile, background updates paused)\"}}"
+            "{{\"text\":\"Game:ON\",\"class\":\"active\",\"tooltip\":\"Game Mode ON (Performance profile, background updates paused)\"}}"
         );
     } else {
         println!(
-            "{{\"text\":\"󰊗 Game\",\"class\":\"inactive\",\"tooltip\":\"Tap to enable Game Mode\"}}"
+            "{{\"text\":\"Game\",\"class\":\"inactive\",\"tooltip\":\"Tap to enable Game Mode\"}}"
         );
     }
 }
@@ -816,6 +861,30 @@ fn main() {
                 &format!("Active profile: {}", next.power_profile),
             );
         }
+        "brightness" => {
+            let cur = get_backlight_pct() as i32;
+            let target = match sub {
+                "up" => (cur + 5).clamp(5, 100) as u32,
+                "down" => (cur - 5).clamp(5, 100) as u32,
+                s if s.starts_with('+') => {
+                    let delta: i32 = s[1..].parse().unwrap_or(5);
+                    (cur + delta).clamp(5, 100) as u32
+                }
+                s if s.starts_with('-') => {
+                    let delta: i32 = s[1..].parse().unwrap_or(5);
+                    (cur - delta).clamp(5, 100) as u32
+                }
+                other => other.parse::<u32>().unwrap_or(cur as u32).clamp(5, 100),
+            };
+            set_backlight_pct(target);
+            let mut cfg = load_config();
+            let lux = read_ambient_lux().unwrap_or(80.0);
+            let base = lux_to_brightness_pct(lux, 0) as i32;
+            cfg.brightness_offset = (target as i32 - base).clamp(-60, 60);
+            save_config(&cfg);
+            let next = compute_state(&cfg, "normal", lux);
+            write_state(&next);
+        }
         "osk" => match sub {
             "show" => set_osk_visible(true),
             "hide" => set_osk_visible(false),
@@ -826,7 +895,7 @@ fn main() {
         "update" => handle_update_cmd(sub),
         _ => {
             eprintln!(
-                "Usage: transformerd [daemon|status|mode|rotate|autobrightness|gamemode|power|osk|update]"
+                "Usage: transformerd [daemon|status|mode|rotate|autobrightness|brightness|gamemode|power|osk|update]"
             );
         }
     }

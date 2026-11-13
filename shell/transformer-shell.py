@@ -359,7 +359,6 @@ class QuickSettingsApp(Gtk.Application):
             Gtk.Orientation.HORIZONTAL, 5, 100, 5
         )
         self.b_scale.set_hexpand(True)
-        self.b_scale.set_Value = read_state().get("brightness_pct", 60)
         self.b_scale.set_value(read_state().get("brightness_pct", 60))
         self.b_scale.connect("value-changed", self.on_brightness_changed)
         b_row.append(self.b_scale)
@@ -457,13 +456,13 @@ class QuickSettingsApp(Gtk.Application):
 
         is_tablet = st.get("effective_mode") == "tablet"
         self.btn_mode.set_label(
-            f"{'󰓶  Tablet Mode' if is_tablet else '󰌢  Laptop Mode'}\nOverride: {st.get('mode_override', 'auto')}"
+            f"{'📱  Tablet Mode' if is_tablet else '💻  Laptop Mode'}\nOverride: {st.get('mode_override', 'auto')}"
         )
         self.set_tile_active(self.btn_mode, is_tablet)
 
         rot_lock = st.get("rotation_locked", False)
         self.btn_rotate.set_label(
-            f"ScreenRotation  Rotation\n{'Locked' if rot_lock else 'Auto (' + st.get('orientation', 'normal') + ')'}"
+            f"↻  Rotation\n{'Locked' if rot_lock else 'Auto (' + st.get('orientation', 'normal') + ')'}"
         )
         self.set_tile_active(self.btn_rotate, not rot_lock)
 
@@ -475,7 +474,7 @@ class QuickSettingsApp(Gtk.Application):
 
         gm = st.get("game_mode", False)
         self.btn_game.set_label(
-            f"󰊗  Game Mode\n{'ACTIVE (Boost)' if gm else 'Off'}"
+            f"🎮  Game Mode\n{'ACTIVE (Boost)' if gm else 'Off'}"
         )
         self.set_tile_active(self.btn_game, gm)
 

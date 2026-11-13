@@ -44,14 +44,19 @@ jobs:
           podman run --rm "${IMAGE_NAME}:stable" bash -euxc '
             test -x /usr/bin/transformerd
             test -x /usr/bin/transformerdctl
+            test -x /usr/bin/t100-window-ctl
             test -x /usr/bin/wvkbd-mobintl
             test -x /usr/bin/transformer-greeter
+            test -x /usr/bin/transformer-greeter-session
             test -x /usr/bin/transformer-shell
             test -x /usr/bin/transformer-session
+            test -f /etc/xdg/quickshell/transformeros/shell.qml
+            test -f /etc/xdg/quickshell/transformeros/greeter.qml
+            test -f /usr/lib64/firefox/browser/defaults/preferences/99-t100tas-prefs.js
             test -f /usr/lib/firmware/brcm/BCM4324B3.hcd
             test -f /usr/lib/firmware/brcm/brcmfmac43241b4-sdio.txt
             find /usr/lib/efi /usr/lib/bootupd/updates /usr/share/transformeros -iname "*ia32*.efi" | grep -q .
-            bootc container lint || true
+            bootc container lint --fatal-warnings || bootc container lint || true
           '
 
       - name: Log in to GitHub Container Registry (GHCR)

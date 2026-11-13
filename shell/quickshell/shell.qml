@@ -1,35 +1,39 @@
-// TransformerOS Quickshell QML companion configuration
-// Reads /run/user/$UID/transformeros/state.json maintained by transformerd
 import QtQuick
 import Quickshell
 import Quickshell.Io
 
-Scope {
-    id: root
-    property string effectiveMode: "docked"
-    property bool gameMode: false
-    property int batteryPct: 100
+ShellRoot {
+    TopBar {}
+    BottomNavBar {}
+    QuickSettingsDrawer {}
+    AppGridOverlay {}
+    RecentsOverlay {}
+    NotificationsOverlay {}
+    PolkitOverlay {}
+    LockScreen {}
 
-    Timer {
-        interval: 1000
-        running: true
-        repeat: true
-        onTriggered: stateProc.running = true
-    }
+    IpcHandler {
+        target: "shell"
 
-    Process {
-        id: stateProc
-        command: ["transformerd", "status"]
-        stdout: SplitParser {
-            splitMarker: ""
-            onRead: data => {
-                try {
-                    const st = JSON.parse(data);
-                    root.effectiveMode = st.effective_mode || "docked";
-                    root.gameMode = !!st.game_mode;
-                    root.batteryPct = st.battery_pct || 100;
-                } catch (e) {}
-            }
+        function toggleQuickSettings() {
+            StateBridge.toggleQuickSettings();
+        }
+
+        function toggleAppGrid() {
+            StateBridge.toggleAppGrid();
+        }
+
+        function toggleRecents() {
+            StateBridge.toggleRecents();
+        }
+
+        function closePopups() {
+            StateBridge.closePopups();
+        }
+
+        function lock() {
+            StateBridge.closePopups();
+            StateBridge.lockRequested = true;
         }
     }
 }

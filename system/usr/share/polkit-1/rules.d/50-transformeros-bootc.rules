@@ -6,4 +6,11 @@ polkit.addRule(function(action, subject) {
             return polkit.Result.YES;
         }
     }
+    if ((action.id == "org.freedesktop.login1.power-off" ||
+         action.id == "org.freedesktop.login1.reboot" ||
+         action.id == "org.freedesktop.login1.suspend") &&
+        (subject.user == "greeter" || subject.isInGroup("wheel")) &&
+        subject.active) {
+        return polkit.Result.YES;
+    }
 });
