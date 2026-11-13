@@ -182,4 +182,4 @@ RUN set -euo pipefail; \
     fi; \
     KVER="$(cd /usr/lib/modules && ls -1 | head -n 1)"; \
     dracut --force --no-hostonly --zstd --kver "$KVER" "/usr/lib/modules/$KVER/initramfs.img"; \
-    rm -rf /boot/grub2 /run/* /tmp/* /var/tmp/* /var/log/dnf5* /var/cache/*
+    rm -rf /boot/grub2 /run/dnf /run/selinux-policy /tmp/* /var/tmp/* /var/log/dnf5* /var/cache/* 2>/dev/null || true
