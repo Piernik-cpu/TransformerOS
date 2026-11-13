@@ -1,8 +1,9 @@
 use std::env;
 use std::fs;
-use std::io::Write;
+use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -214,7 +215,91 @@ fn read_ambient_lux() -> Option<f64> {
     None
 }
 
-fn read_accel_orientation(current: &str) -> Option<String> {
+#[derive(Default)]
+struct SensorProxyCache {
+    orientation: Option<String>,
+    lux: Option<f64>,
+}
+
+fn map_sensor_proxy_orientation(raw: &str) -> Option<&'static str> {
+    match raw {
+        "normal" => Some("normal"),
+        "bottom-up" => Some("180"),
+        "left-up" => Some("90"),
+        "right-up" => Some("270"),
+        _ => None,
+    }
+}
+
+fn parse_sensor_proxy_line(line: &str, cache: &Arc<Mutex<SensorProxyCache>>) {
+    if let Some((_, rest)) = line.split_once("Accelerometer orientation changed:") {
+        let token = rest.split_whitespace().next().unwrap_or("");
+        if let Some(mapped) = map_sensor_proxy_orientation(token) {
+            if let Ok(mut guard) = cache.lock() {
+                guard.orientation = Some(mapped.to_string());
+            }
+        }
+    } else if let Some((_, rest)) = line.split_once("Has accelerometer") {
+        if let Some((_, orest)) = rest.split_once("orientation:") {
+            let token = orest
+                .split(|c: char| c == ',' || c == ')' || c.is_whitespace())
+                .find(|s| !s.is_empty())
+                .unwrap_or("");
+            if let Some(mapped) = map_sensor_proxy_orientation(token) {
+                if let Ok(mut guard) = cache.lock() {
+                    guard.orientation = Some(mapped.to_string());
+                }
+            }
+        }
+    }
+
+    if let Some((_, rest)) = line.split_once("Light changed:") {
+        let num_str = rest.split_whitespace().next().unwrap_or("").replace(',', ".");
+        if let Ok(val) = num_str.parse::<f64>() {
+            if let Ok(mut guard) = cache.lock() {
+                guard.lux = Some(val.max(0.0));
+            }
+        }
+    } else if let Some((_, rest)) = line.split_once("Has ambient light sensor") {
+        if let Some((_, vrest)) = rest.split_once("value:") {
+            let num_str = vrest
+                .split(|c: char| c == ',' || c == ')' || c.is_whitespace())
+                .find(|s| !s.is_empty())
+                .unwrap_or("")
+                .replace(',', ".");
+            if let Ok(val) = num_str.parse::<f64>() {
+                if let Ok(mut guard) = cache.lock() {
+                    guard.lux = Some(val.max(0.0));
+                }
+            }
+        }
+    }
+}
+
+fn spawn_sensor_proxy_reader(cache: Arc<Mutex<SensorProxyCache>>) {
+    thread::spawn(move || loop {
+        if let Ok(mut child) = Command::new("monitor-sensor")
+            .env("LC_ALL", "C")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+        {
+            if let Some(stdout) = child.stdout.take() {
+                let reader = BufReader::new(stdout);
+                for line in reader.lines().map_while(Result::ok) {
+                    parse_sensor_proxy_line(&line, &cache);
+                }
+            }
+            let _ = child.wait();
+        }
+        thread::sleep(Duration::from_secs(3));
+    });
+}
+
+fn read_accel_orientation(current: &str, proxy_orient: Option<&str>) -> Option<String> {
+    if let Some(mapped) = proxy_orient {
+        return Some(mapped.to_string());
+    }
     let Ok(entries) = fs::read_dir("/sys/bus/iio/devices") else {
         return None;
     };
@@ -494,6 +579,15 @@ fn write_state(st: &RuntimeState) {
 }
 
 fn compute_state(cfg: &ConfigState, prev_orient: &str, ema_lux: f64) -> RuntimeState {
+    compute_state_with_proxy(cfg, prev_orient, ema_lux, None)
+}
+
+fn compute_state_with_proxy(
+    cfg: &ConfigState,
+    prev_orient: &str,
+    ema_lux: f64,
+    proxy_orient: Option<&str>,
+) -> RuntimeState {
     let dock = has_dock();
     let kbd = has_keyboard();
     let effective_mode = match cfg.mode_override.as_str() {
@@ -513,7 +607,8 @@ fn compute_state(cfg: &ConfigState, prev_orient: &str, ema_lux: f64) -> RuntimeS
     } else if cfg.rotation_locked {
         prev_orient.to_string()
     } else {
-        read_accel_orientation(prev_orient).unwrap_or_else(|| prev_orient.to_string())
+        read_accel_orientation(prev_orient, proxy_orient)
+            .unwrap_or_else(|| prev_orient.to_string())
     };
 
     let (ac_online, bat_pct, bat_raw, bat_status) = read_battery_and_ac();
@@ -556,6 +651,9 @@ fn compute_state(cfg: &ConfigState, prev_orient: &str, ema_lux: f64) -> RuntimeS
 }
 
 fn run_daemon() {
+    let sensor_cache = Arc::new(Mutex::new(SensorProxyCache::default()));
+    spawn_sensor_proxy_reader(Arc::clone(&sensor_cache));
+
     let mut prev_mode = String::new();
     let mut prev_orient = "normal".to_string();
     let mut prev_power = String::new();
@@ -567,11 +665,16 @@ fn run_daemon() {
 
     loop {
         let mut cfg = load_config();
-        if let Some(lux) = read_ambient_lux() {
+        let (proxy_orient, proxy_lux) = if let Ok(guard) = sensor_cache.lock() {
+            (guard.orientation.clone(), guard.lux)
+        } else {
+            (None, None)
+        };
+        if let Some(lux) = read_ambient_lux().or(proxy_lux) {
             ema_lux = ema_lux * 0.75 + lux * 0.25;
         }
 
-        let mut st = compute_state(&cfg, &prev_orient, ema_lux);
+        let mut st = compute_state_with_proxy(&cfg, &prev_orient, ema_lux, proxy_orient.as_deref());
 
         // Preserve external manual brightness changes cleanly by adapting offset
         if cfg.auto_brightness && st.brightness_pct.abs_diff(last_applied_brightness) >= 4 {

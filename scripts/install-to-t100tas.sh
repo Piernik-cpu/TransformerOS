@@ -211,6 +211,7 @@ PODMAN_ARGS=(
     --rm
     --privileged
     --pid=host
+    --ipc=host
     --security-opt label=type:unconfined_t
     -v /dev:/dev
     -v /var/lib/containers:/var/lib/containers
@@ -253,6 +254,10 @@ ESP_PART="$(lsblk -nr -o PATH,PARTTYPE "$EMMC_REAL" | awk '{
     if (pt == "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" || pt == "0xef") { print $1; exit }
 }')"
 BOOT_PART="$(lsblk -nr -o PATH,LABEL "$EMMC_REAL" | awk '$2 == "boot" { print $1; exit }')"
+if [ -z "$BOOT_PART" ] && [ "$MODE" = "to-existing-root" ] && mountpoint -q /boot; then
+    BOOT_PART="$(findmnt -nr -o SOURCE /boot 2>/dev/null || true)"
+    BOOT_PART="${BOOT_PART%%[*}"
+fi
 
 BOOT_UUID=""
 if [ -n "$BOOT_PART" ] && [ -b "$BOOT_PART" ]; then
@@ -269,6 +274,12 @@ if [ -n "$BOOT_PART" ] && [ -b "$BOOT_PART" ]; then
             echo "Wrote GRUB text-console guard: ${gdir}/console.cfg"
         fi
     done
+elif [ "$MODE" = "to-existing-root" ] && [ -n "$ROOT_REAL" ] && [ -b "$ROOT_REAL" ]; then
+    BOOT_UUID="$(blkid -s UUID -o value "$ROOT_REAL" 2>/dev/null || true)"
+    if [ -d /boot/grub2 ]; then
+        printf 'terminal_output console\n' > /boot/grub2/console.cfg
+        echo "Wrote GRUB text-console guard: /boot/grub2/console.cfg"
+    fi
 fi
 
 if [ -n "$ESP_PART" ] && [ -b "$ESP_PART" ]; then
@@ -284,9 +295,9 @@ if [ -n "$ESP_PART" ] && [ -b "$ESP_PART" ]; then
         mkdir -p /esp/EFI/BOOT /esp/EFI/fedora
         ensure_copy() {
             local src="$1" dst="$2"
-            if [ -f "$src" ] && [ ! -f "$dst" ]; then
+            if [ -f "$src" ] && ! cmp -s "$src" "$dst" 2>/dev/null; then
                 cp -f "$src" "$dst"
-                echo "Installed missing IA32 EFI asset: $dst"
+                echo "Synced IA32 EFI asset: $dst"
             fi
         }
         shopt -s nullglob
@@ -306,6 +317,30 @@ if [ -n "$ESP_PART" ] && [ -b "$ESP_PART" ]; then
             echo "Installed /esp/EFI/fedora/bootuuid.cfg"
         fi
     '
+
+    # bootupd on x86_64 hardcodes \EFI\fedora\shimx64.efi in efibootmgr even when
+    # fw_platform_size=32. Replace any shimx64.efi NVRAM entry with shimia32.efi.
+    if [ -r /sys/firmware/efi/fw_platform_size ] \
+        && [ "$(cat /sys/firmware/efi/fw_platform_size 2>/dev/null || true)" = "32" ] \
+        && [ -f "${ESP_MNT}/EFI/fedora/shimia32.efi" ] \
+        && command -v efibootmgr >/dev/null 2>&1 \
+        && { [ "$MODE" = "to-existing-root" ] || efibootmgr -v 2>/dev/null | grep -qi 'shimx64\.efi'; }; then
+        ESP_REAL="$(readlink -f "$ESP_PART")"
+        ESP_PARTNUM="$(cat "/sys/class/block/$(basename "$ESP_REAL")/partition" 2>/dev/null || true)"
+        if [ -n "$ESP_PARTNUM" ] && [ -b "$EMMC_REAL" ]; then
+            while IFS= read -r bootnum; do
+                [ -n "$bootnum" ] || continue
+                efibootmgr -b "$bootnum" -B >/dev/null 2>&1 || true
+            done < <(efibootmgr -v 2>/dev/null | grep -iE 'shimx64\.efi|TransformerOS' | sed -nE 's/^Boot([0-9A-Fa-f]{4}).*/\1/p')
+            efibootmgr --create --disk "$EMMC_REAL" --part "$ESP_PARTNUM" --loader '\EFI\fedora\shimia32.efi' --label 'TransformerOS' >/dev/null
+            echo "Configured 32-bit IA32 EFI NVRAM boot entry: TransformerOS (\\EFI\\fedora\\shimia32.efi)"
+        fi
+    fi
+
+    if [ -n "${TMP_ESP:-}" ]; then
+        umount "$TMP_ESP" 2>/dev/null || true
+        rmdir "$TMP_ESP" 2>/dev/null || true
+    fi
 else
     echo "WARNING: Could not find EFI System Partition on $EMMC_REAL for IA32 post-check." >&2
 fi
