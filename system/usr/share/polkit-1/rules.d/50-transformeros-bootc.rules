@@ -1,0 +1,9 @@
+polkit.addRule(function(action, subject) {
+    if ((action.id == "org.freedesktop.policykit.exec") &&
+        subject.isInGroup("wheel")) {
+        var prog = action.lookup("program");
+        if (prog == "/usr/bin/bootc" || prog == "/usr/sbin/bootc") {
+            return polkit.Result.YES;
+        }
+    }
+});

@@ -1,0 +1,8 @@
+# ASUS Transformer Book T100TAS kernel command-line arguments for bootc
+kargs = [
+  "quiet",
+  "zswap.enabled=0",
+  "mitigations=off",
+  "rd.driver.pre=mmc_core,mmc_block,sdhci,sdhci_acpi",
+]
+match-architectures = ["x86_64"]

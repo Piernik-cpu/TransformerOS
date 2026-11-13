@@ -1,0 +1,1 @@
+EARLYOOM_ARGS="-r 0 -m 3 -M 256000 --prefer '^(Web Content|Isolated Web Co|firefox)$' --avoid '^(bootc|ostree|rpm-ostree|greetd|tuigreet|labwc|waybar|wvkbd-mobintl|transformerd|transformer-shell|transformer-greeter|foot|fuzzel|swaybg|mako|Xwayland|systemd|systemd-logind|dbus-daemon|dbus-broker)$'"

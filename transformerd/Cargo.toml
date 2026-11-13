@@ -1,0 +1,10 @@
+[package]
+name = "transformerd"
+version = "0.1.0"
+edition = "2021"
+description = "ASUS Transformer Book T100TAS hardware, tablet-mode, sensor, power, and atomic-update daemon for TransformerOS"
+license = "MIT"
+
+[[bin]]
+name = "transformerd"
+path = "src/main.rs"

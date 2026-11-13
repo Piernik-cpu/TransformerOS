@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=TransformerOS
+Comment=Adaptive 2-in-1 Wayland Desktop & Tablet Shell (labwc)
+Exec=/usr/bin/transformer-session
+Type=Application
+DesktopNames=labwc;wlroots

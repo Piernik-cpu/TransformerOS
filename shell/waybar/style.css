@@ -1,0 +1,66 @@
+* {
+  font-family: "Sans";
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: 0;
+  min-height: 0;
+}
+
+window#waybar {
+  background-color: rgba(15, 20, 30, 0.94);
+  color: #f0f4f8;
+  border-bottom: 1px solid rgba(99, 179, 237, 0.25);
+}
+
+#custom-apps,
+#custom-mode,
+#custom-gamemode,
+#custom-rotate,
+#custom-osk,
+#custom-qs,
+#pulseaudio,
+#backlight,
+#network,
+#memory,
+#battery,
+#clock {
+  padding: 2px 10px;
+  margin: 3px 2px;
+  border-radius: 999px;
+  background-color: rgba(45, 55, 72, 0.65);
+  color: #e2e8f0;
+}
+
+#custom-apps {
+  background-color: #2b6cb0;
+  color: #ffffff;
+}
+
+#custom-mode.tablet {
+  background-color: #3182ce;
+  color: #ffffff;
+}
+
+#custom-gamemode.active {
+  background-color: #d69e2e;
+  color: #1a202c;
+}
+
+#custom-qs {
+  background-color: #2c7a7b;
+  color: #ffffff;
+}
+
+#taskbar button {
+  padding: 2px 8px;
+  margin: 3px 2px;
+  border-radius: 8px;
+  background-color: rgba(30, 41, 59, 0.55);
+  color: #cbd5e1;
+}
+
+#taskbar button.active {
+  background-color: rgba(49, 130, 206, 0.65);
+  color: #ffffff;
+}

@@ -1,0 +1,252 @@
+{
+  "captured_at": "2026-11-13T20:43:45+01:00",
+  "source_conversation_id": "3f34ec06-4f89-4581-98e4-8e69caf271da",
+  "handoff_conversation_id": "9737f935-56ae-4712-8390-e7415a8c8652",
+  "workspaces": {
+    "pc_fixes": "/home/piergi/Scaricati/Antigravity-x64/Projects/PC_fixes",
+    "transformeros": "/home/piergi/Scaricati/Antigravity-x64/Projects/TransformerOS"
+  },
+  "identity": {
+    "hostname": "T100TASIAN",
+    "sys_vendor": "ASUSTeK COMPUTER INC.",
+    "product_name": "T100TAS",
+    "product_version": "1.0",
+    "bios_version": "T100TAS.207",
+    "bios_date": "05/14/2014",
+    "efi_fw_platform_size": 32,
+    "efi_bootloader_packages": ["grub-efi-ia32", "shim-signed"],
+    "mem_sleep": "[s2idle]"
+  },
+  "os": {
+    "distro": "Debian GNU/Linux 13 (trixie)",
+    "debian_version_full": "13.7",
+    "kernel_release": "6.12.113+deb13-amd64",
+    "kernel_version": "#1 SMP PREEMPT_DYNAMIC Debian 6.12.113-1 (2026-10-15) x86_64",
+    "architectures": ["amd64", "i386"],
+    "cmdline": "BOOT_IMAGE=/boot/vmlinuz-6.12.113+deb13-amd64 root=UUID=71f8d441-a98a-405b-a221-e8ae4c32437a ro quiet mitigations=off zswap.enabled=0",
+    "live_session": {
+      "uptime_seconds": 749.04,
+      "xdg_current_desktop": "labwc:wlroots",
+      "xdg_session_type": "wayland",
+      "display_manager": "greetd (vt=7, tuigreet)",
+      "compositor": "labwc 0.8.3-1"
+    }
+  },
+  "cpu": {
+    "model_name": "Intel(R) Atom(TM) CPU  Z3775  @ 1.46GHz",
+    "architecture": "Silvermont / Bay Trail",
+    "family": 6,
+    "model": 55,
+    "stepping": 8,
+    "cores": 4,
+    "threads": 4,
+    "sockets": 1,
+    "numa_nodes": 1,
+    "address_sizes": "36 bits physical, 48 bits virtual",
+    "min_mhz": 533.2,
+    "max_mhz": 2399.3999,
+    "bogomips": 2933.33,
+    "caches": {
+      "l1d": "96 KiB (4 instances)",
+      "l1i": "128 KiB (4 instances)",
+      "l2": "2 MiB (2 instances)"
+    },
+    "virtualization": ["VT-x", "ept", "vpid", "unrestricted_guest"],
+    "microcode": {
+      "loaded_revision": "0x838",
+      "package": "intel-microcode 3.20251111.1~deb13u1",
+      "blacklist_file": "/etc/modprobe.d/intel-microcode-blacklist.conf",
+      "blacklist_content": "blacklist microcode"
+    },
+    "scaling": {
+      "driver": "intel_cpufreq",
+      "intel_pstate_status": "passive",
+      "no_turbo": 0,
+      "min_perf_pct": 22,
+      "max_perf_pct": 100,
+      "governors": ["performance", "schedutil"],
+      "active_governor": "schedutil",
+      "energy_perf_bias": 0,
+      "power_profiles_daemon": "performance"
+    },
+    "cpuidle_states": [
+      {"state": "state0", "name": "POLL", "latency": 0, "disable": 0},
+      {"state": "state1", "name": "C1", "latency": 1, "disable": 0},
+      {"state": "state2", "name": "C6N", "latency": 300, "disable": 0},
+      {"state": "state3", "name": "C6S", "latency": 500, "disable": 0},
+      {"state": "state4", "name": "C7", "latency": 1200, "disable": 0},
+      {"state": "state5", "name": "C7S", "latency": 10000, "disable": 0}
+    ],
+    "stock_vulnerabilities": {
+      "cpuinfo_bugs": ["cpu_meltdown", "spectre_v1", "spectre_v2", "mds", "msbds_only", "mmio_unknown"],
+      "mitigated_without_mitigations_off": ["mds", "meltdown", "spectre_v1", "spectre_v2"],
+      "mmio_stale_data": "Unknown: No mitigations",
+      "mitigations_currently_disabled": true
+    },
+    "thermal_zones_millicelsius": {
+      "thermal_zone0_acpitz": 0,
+      "thermal_zone1_INT3400": 20000,
+      "thermal_zone2_4_STR0_2": -273150,
+      "thermal_zone5_TCPU": [50000, 53000],
+      "thermal_zone6_soc_dts0": [44000, 47000],
+      "thermal_zone7_soc_dts1": [45000, 49000]
+    }
+  },
+  "memory_and_swap": {
+    "mem_total_kb": 1903176,
+    "mem_total_gib": 1.81,
+    "thp_enabled": "madvise",
+    "thp_defrag": "defer+madvise",
+    "zram0": {
+      "algo": "zstd",
+      "percent": 125,
+      "priority": 100,
+      "size_kib": 2378964,
+      "live_mm_stat_uncompressed_bytes": 142172160,
+      "live_mm_stat_compressed_bytes": 28742802,
+      "live_mm_stat_mem_used_bytes": 30732288
+    },
+    "disk_swap": {
+      "uuid": "59f9aa15-681e-4860-9f5f-b643801b3cde",
+      "size_kib": 1582076,
+      "priority": -2
+    },
+    "live_free_h_post_reboot": {
+      "mem_total": "1.8Gi",
+      "mem_used": "1.1Gi",
+      "mem_free": "98Mi",
+      "mem_shared": "142Mi",
+      "mem_buff_cache": "930Mi",
+      "mem_available": "692Mi",
+      "swap_total": "3.8Gi",
+      "swap_used": "129Mi",
+      "swap_free": "3.7Gi"
+    },
+    "pre_fix_plasma_swap_used_at_20_20": "676.1M"
+  },
+  "storage": {
+    "dynamic_probe_warning": "80860F14:00 (eMMC) and 80860F14:01 (microSD) swap /dev/mmcblk1 and /dev/mmcblk2 across boots; always use UUID/PARTUUID.",
+    "controllers": {
+      "emmc": {
+        "acpi_device": "80860F14:00",
+        "size": "29.1G",
+        "scheduler": "mq-deadline",
+        "nr_requests": 64,
+        "read_ahead_kb": 256,
+        "rotational": 0,
+        "discard_max_bytes": 16753623040,
+        "life_time": "0x00 0x00",
+        "pre_eol_info": "0x00"
+      },
+      "microsd": {
+        "acpi_device": "80860F14:01",
+        "size": "7.6G",
+        "scheduler": "mq-deadline",
+        "nr_requests": 64,
+        "read_ahead_kb": 256,
+        "rotational": 0
+      }
+    },
+    "partitions": [
+      {
+        "mountpoint": "/",
+        "size": "26.7G",
+        "fstype": "ext4",
+        "uuid": "71f8d441-a98a-405b-a221-e8ae4c32437a",
+        "options": "noatime,commit=30,errors=remount-ro",
+        "disk_usage_before_fix": "25G used / 423M free (99%)",
+        "disk_usage_after_fix": "22G used / 3.4G free (87%)"
+      },
+      {
+        "mountpoint": "/boot/efi",
+        "size": "976M",
+        "fstype": "vfat",
+        "uuid": "76B7-0B3E",
+        "options": "umask=0077"
+      },
+      {
+        "mountpoint": "none (swap)",
+        "size": "1.5G",
+        "fstype": "swap",
+        "uuid": "59f9aa15-681e-4860-9f5f-b643801b3cde",
+        "options": "sw"
+      },
+      {
+        "mountpoint": "/media/piergi/EXTRA",
+        "size": "7.4G",
+        "fstype": "ext4",
+        "uuid": "50e09466-61d9-4b04-9445-161548f62afc",
+        "options": "defaults,noatime,nofail,x-gvfs-show",
+        "disk_usage": "5.1G used / 2.0G free"
+      }
+    ]
+  },
+  "pci_devices": [
+    {"slot": "00:00.0", "class": "0600", "id": "8086:0f00", "rev": "0d", "subsys": "1043:14ed", "driver": "iosf_mbi_pci"},
+    {"slot": "00:02.0", "class": "0300", "id": "8086:0f31", "rev": "0d", "subsys": "1043:14ed", "driver": "i915"},
+    {"slot": "00:14.0", "class": "0c03", "id": "8086:0f35", "rev": "0d", "subsys": "1043:14ed", "driver": "xhci_hcd/xhci_pci"},
+    {"slot": "00:1a.0", "class": "1080", "id": "8086:0f18", "rev": "0d", "subsys": "1043:14ed", "driver": "mei_txe"},
+    {"slot": "00:1f.0", "class": "0601", "id": "8086:0f1c", "rev": "0d", "subsys": "1043:14ed", "driver": "lpc_ich"}
+  ],
+  "peripherals": {
+    "gpu": {
+      "renderer": "Mesa Intel(R) HD Graphics (BYT) (0xf31)",
+      "mesa": "25.0.7-2+deb13u1",
+      "opengl": "4.2",
+      "gles": "3.0",
+      "vaapi_driver": "i965-va-driver",
+      "connectors": ["card0-DSI-1 (1366x768, 60186 mHz)", "card0-DP-1", "card0-HDMI-A-1"],
+      "backlight": "intel_backlight"
+    },
+    "usb_dock": {
+      "device_id": "0b05:17e0",
+      "name": "ASUSTek Computer, Inc. ASUS Base Station(T100)",
+      "usb1_power_control": "on",
+      "autosuspend_seconds": 2
+    },
+    "wifi_bt": {
+      "sdio_id": "02D0:4324",
+      "wifi_driver": "brcmfmac / brcmfmac_wcc",
+      "firmware_pkg": "firmware-brcm80211 20250410-2",
+      "firmware_blob": "brcmfmac43241b4-sdio.bin",
+      "wlan_interface": "wlan0",
+      "wlan_mac": "54:a0:50:3a:fc:46",
+      "bt_driver": "hci_uart",
+      "bt_address": "7E:FB:1D:A3:E7:DF"
+    },
+    "audio": {
+      "server": "PipeWire 1.4.2 + WirePlumber (pipewire-pulse)",
+      "cards": ["card 0: Intel HDMI/DP LPE Audio", "card 1: bytcr-rt5640"],
+      "modules": ["snd_soc_sst_bytcr_rt5640", "snd_soc_rt5640", "snd_intel_sst_acpi", "snd_intel_sst_core", "snd_soc_sst_atom_hifi2_platform"]
+    },
+    "touchscreen": {
+      "name": "SIS0817:00 0457:1071",
+      "bus": "80860F41:05/i2c-5",
+      "mapped_output": "DSI-1",
+      "mouse_emulation": false
+    },
+    "iio_sensors": [
+      {"device": "iio:device0", "name": "i2c-CPLM3218:00", "type": "ambient-light", "bus": "80860F41:02"},
+      {"device": "iio:device1", "name": "i2c-INVN6500:00", "type": "accel-gyro", "bus": "80860F41:04"},
+      {"device": "iio:device2", "name": "AK8963", "type": "magnetometer", "driver": "ak8975", "bus": "14-000c"}
+    ],
+    "battery": {
+      "name": "BATC",
+      "model": "SR Real Battery",
+      "manufacturer": "Intel SR 1",
+      "cycle_count": 344,
+      "voltage_min_design": 3750000,
+      "voltage_now": 3607000,
+      "charge_full_design": 8060000,
+      "charge_full": 11958000,
+      "ac_adapter": "ADP1"
+    }
+  },
+  "transformeros_build_requirements": [
+    "Must include 32-bit IA32 UEFI bootloader (BOOTIA32.EFI / grub-efi-ia32) booting 64-bit x86_64 kernel",
+    "Must address all partitions, swap, and root= kernel arg by UUID or PARTUUID due to dynamic mmcblk1/mmcblk2 probe order",
+    "Include brcmfmac (brcmfmac43241b4-sdio.bin), bytcr-rt5640 ALSA UCM/SST firmware, i965-va-driver (not intel-media-va-driver), iio-sensor-proxy",
+    "Configure ZRAM (zstd, >=100% RAM), zswap.enabled=0, earlyoom, and lightweight wlroots Wayland stack (labwc + waybar + wvkbd-mobintl) for 1.81 GiB RAM ceiling",
+    "Keep USB controller usb1 power/control=on for reliable 0b05:17e0 keyboard dock attach/detach detection"
+  ]
+}

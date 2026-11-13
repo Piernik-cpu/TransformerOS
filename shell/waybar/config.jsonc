@@ -1,0 +1,107 @@
+{
+  "layer": "top",
+  "position": "top",
+  "height": 34,
+  "spacing": 6,
+  "modules-left": [
+    "custom/apps",
+    "custom/mode",
+    "wlr/taskbar"
+  ],
+  "modules-center": [
+    "clock"
+  ],
+  "modules-right": [
+    "custom/gamemode",
+    "custom/rotate",
+    "custom/osk",
+    "pulseaudio",
+    "backlight",
+    "network",
+    "memory",
+    "battery",
+    "custom/qs"
+  ],
+  "custom/apps": {
+    "format": " 󰀻 Apps ",
+    "tooltip-format": "Open Applications Grid",
+    "on-click": "/usr/bin/transformer-shell appgrid",
+    "on-click-right": "fuzzel"
+  },
+  "custom/mode": {
+    "exec": "transformerd waybar-mode",
+    "return-type": "json",
+    "interval": 2,
+    "signal": 8,
+    "on-click": "transformerd mode toggle",
+    "on-click-right": "transformerd mode auto"
+  },
+  "wlr/taskbar": {
+    "format": "{icon} {title:.18}",
+    "icon-size": 18,
+    "tooltip-format": "{title}",
+    "on-click": "activate",
+    "on-click-middle": "close"
+  },
+  "clock": {
+    "format": "{:%H:%M  •  %a %d %b}",
+    "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
+  },
+  "custom/gamemode": {
+    "exec": "transformerd waybar-gamemode",
+    "return-type": "json",
+    "interval": 3,
+    "signal": 8,
+    "on-click": "transformerd gamemode toggle"
+  },
+  "custom/rotate": {
+    "exec": "transformerd waybar-rotate",
+    "return-type": "json",
+    "interval": 3,
+    "signal": 10,
+    "on-click": "transformerd rotate toggle"
+  },
+  "custom/osk": {
+    "format": " ⌨ ",
+    "tooltip-format": "Toggle On-Screen Touch Keyboard",
+    "on-click": "transformerd osk toggle"
+  },
+  "pulseaudio": {
+    "format": "{icon} {volume}%",
+    "format-muted": "󰝟 Mute",
+    "format-icons": {
+      "default": ["", "", ""]
+    },
+    "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+  },
+  "backlight": {
+    "device": "intel_backlight",
+    "format": "☀ {percent}%",
+    "on-scroll-up": "brightnessctl set +5%",
+    "on-scroll-down": "brightnessctl set 5%-"
+  },
+  "network": {
+    "format-wifi": "󰖩 {essid}",
+    "format-ethernet": "󰈀 ETH",
+    "format-disconnected": "󰖪 Off",
+    "tooltip-format": "{ifname}: {ipaddr}/{cidr} ({signalStrength}%)",
+    "on-click": "/usr/bin/transformer-shell qs"
+  },
+  "memory": {
+    "interval": 5,
+    "format": "󰍛 {used:0.1f}G"
+  },
+  "battery": {
+    "bat": "BATC",
+    "adapter": "ADP1",
+    "interval": 10,
+    "format": "{icon} {capacity}%",
+    "format-charging": "⚡ {capacity}%",
+    "format-icons": ["", "", "", "", ""]
+  },
+  "custom/qs": {
+    "format": " ⚙ Quick ",
+    "tooltip-format": "Open Quick Settings & Atomic Update Panel",
+    "on-click": "/usr/bin/transformer-shell qs"
+  }
+}

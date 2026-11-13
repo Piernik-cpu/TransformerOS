@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# TransformerOS Session Autostart
+
+# Background wallpaper (solid deep slate for zero VRAM overhead)
+swaybg -c '#0f1624' >/dev/null 2>&1 &
+
+# Lightweight notification daemon
+mako >/dev/null 2>&1 &
+
+# Polkit authentication agent for GUI privilege elevation (one-tap bootc update)
+if [ -x /usr/libexec/polkit-mate-authentication-agent-1 ]; then
+    /usr/libexec/polkit-mate-authentication-agent-1 >/dev/null 2>&1 &
+elif [ -x /usr/libexec/xfce-polkit ]; then
+    /usr/libexec/xfce-polkit >/dev/null 2>&1 &
+fi
+
+# Start transformerd hardware/mode/sensor/power daemon
+transformerd daemon >/dev/null 2>&1 &
+
+# Top status/task panel
+waybar >/dev/null 2>&1 &
+
+# Android-style bottom navigation bar (auto-shows in Tablet Mode, hides in Laptop Mode)
+/usr/bin/transformer-shell bar >/dev/null 2>&1 &
+
+# Idle management: dim/blank screen after 5m, lock after 10m (no forced suspend while working over SSH)
+swayidle -w \
+    timeout 300 'wlopm --off \*' \
+    resume 'wlopm --on \*' >/dev/null 2>&1 &

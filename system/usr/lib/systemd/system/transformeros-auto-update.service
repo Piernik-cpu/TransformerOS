@@ -1,0 +1,11 @@
+[Unit]
+Description=TransformerOS Atomic Image Background Stage (No Auto-Reboot)
+Wants=network-online.target
+After=network-online.target
+ConditionACPower=true
+
+[Service]
+Type=oneshot
+Nice=19
+IOSchedulingClass=idle
+ExecStart=/usr/bin/bootc upgrade
