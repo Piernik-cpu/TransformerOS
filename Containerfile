@@ -100,6 +100,7 @@ RUN dnf5 install -y --setopt=ip_resolve=ipv4 --setopt=install_weak_deps=False \
         wlopm \
         wlr-randr \
         kanshi \
+        xorg-x11-server-Xwayland \
         xdg-desktop-portal \
         xdg-desktop-portal-wlr \
         xdg-desktop-portal-gtk \
@@ -173,9 +174,9 @@ RUN chmod 0755 \
         /etc/skel/.config/labwc/autostart && \
     cp -a /usr/share/transformeros/labwc/rc-docked.xml /usr/share/transformeros/labwc/rc.xml && \
     cp -a /etc/skel/.config/labwc/rc-docked.xml /etc/skel/.config/labwc/rc.xml && \
-    # Ensure greeter user has video/input group access for Wayland DRM + touch + backlight
-    (getent passwd greeter >/dev/null || useradd -r -M -d /var/lib/greetd -s /sbin/nologin greeter) && \
-    usermod -aG video,input greeter || true && \
+    # Ensure greetd greeter user has video/input group access for Wayland DRM + touch + backlight
+    (getent passwd greetd >/dev/null || useradd -r -M -d /var/lib/greetd -s /sbin/nologin greetd) && \
+    usermod -aG video,input greetd || true && \
     # Enable core services and microSD automount
     systemctl enable \
         greetd.service \

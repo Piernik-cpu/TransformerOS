@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # TransformerOS Session Autostart
 
+# Export Wayland environment to systemd/D-Bus so xdg-desktop-portal starts cleanly
+dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP MOZ_ENABLE_WAYLAND QT_QPA_PLATFORM LIBVA_DRIVER_NAME >/dev/null 2>&1 || true
+
 # Background wallpaper (solid deep slate for zero VRAM overhead)
 swaybg -c '#0f1624' >/dev/null 2>&1 &
 

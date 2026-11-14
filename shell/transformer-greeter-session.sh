@@ -26,6 +26,7 @@ cat << 'EOF' > "$GREETER_DIR/rc.xml"
 EOF
 
 # Use Qt software scenegraph backend for fast boot-to-greeter & zero Mesa shader overhead
+export XKB_DEFAULT_LAYOUT=it
 export QT_QPA_PLATFORM=wayland
 export QT_QUICK_BACKEND=software
 exec labwc -C "$GREETER_DIR" -s "/usr/bin/quickshell -p /etc/xdg/quickshell/transformeros/greeter.qml"

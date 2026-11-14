@@ -3,6 +3,7 @@ kargs = [
   "quiet",
   "zswap.enabled=0",
   "mitigations=off",
-  "rd.driver.pre=mmc_core,mmc_block,sdhci,sdhci_acpi",
+  "systemd.tpm2_wait=0",
+  "rd.driver.pre=mmc_core,mmc_block,sdhci,sdhci_acpi,pwm_crc,pwm_lpss,pwm_lpss_platform,gpio_crystalcove",
 ]
 match-architectures = ["x86_64"]

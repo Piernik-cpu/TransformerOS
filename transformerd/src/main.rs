@@ -346,8 +346,27 @@ fn read_accel_orientation(current: &str, proxy_orient: Option<&str>) -> Option<S
     None
 }
 
+fn find_backlight_dir() -> Option<PathBuf> {
+    for name in ["intel_backlight", "acpi_video0", "acpi_video1"] {
+        let p = Path::new("/sys/class/backlight").join(name);
+        if p.join("brightness").exists() && p.join("max_brightness").exists() {
+            return Some(p);
+        }
+    }
+    let entries = fs::read_dir("/sys/class/backlight").ok()?;
+    for entry in entries.flatten() {
+        let p = entry.path();
+        if p.join("brightness").exists() && p.join("max_brightness").exists() {
+            return Some(p);
+        }
+    }
+    None
+}
+
 fn get_backlight_pct() -> u32 {
-    let bl = Path::new("/sys/class/backlight/intel_backlight");
+    let Some(bl) = find_backlight_dir() else {
+        return 50;
+    };
     let cur: f64 = read_trimmed(&bl.join("brightness"))
         .and_then(|v| v.parse().ok())
         .unwrap_or(50.0);
@@ -362,12 +381,13 @@ fn get_backlight_pct() -> u32 {
 
 fn set_backlight_pct(pct: u32) {
     let clamped = pct.clamp(5, 100);
-    let bl = Path::new("/sys/class/backlight/intel_backlight");
-    if let Some(max_str) = read_trimmed(&bl.join("max_brightness")) {
-        if let Ok(max_val) = max_str.parse::<f64>() {
-            let target = ((clamped as f64 / 100.0) * max_val).round() as u32;
-            if fs::write(bl.join("brightness"), format!("{}\n", target)).is_ok() {
-                return;
+    if let Some(bl) = find_backlight_dir() {
+        if let Some(max_str) = read_trimmed(&bl.join("max_brightness")) {
+            if let Ok(max_val) = max_str.parse::<f64>() {
+                let target = ((clamped as f64 / 100.0) * max_val).round() as u32;
+                if fs::write(bl.join("brightness"), format!("{}\n", target)).is_ok() {
+                    return;
+                }
             }
         }
     }

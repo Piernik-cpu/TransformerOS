@@ -17,11 +17,6 @@ import struct
 import subprocess
 import sys
 
-import gi
-gi.require_version("Gtk", "4.0")
-gi.require_version("Gdk", "4.0")
-from gi.repository import Gdk, GLib, Gtk
-
 DOCK_VENDOR = "0b05"
 DOCK_PRODUCT = "17e0"
 
@@ -69,10 +64,21 @@ def greetd_roundtrip(sock: socket.socket, payload: dict) -> dict:
     return json.loads(body.decode("utf-8"))
 
 
-def authenticate_greetd(username: str, password: str, session_cmd: list[str]) -> tuple[bool, str]:
+def authenticate_greetd(
+    username: str,
+    password: str,
+    session_cmd: list[str],
+    session_env: list[str] | None = None,
+) -> tuple[bool, str]:
     sock_path = os.environ.get("GREETD_SOCK")
     if not sock_path:
         return False, "GREETD_SOCK not set"
+    if session_env is None:
+        session_env = [
+            "XDG_SESSION_TYPE=wayland",
+            "XDG_CURRENT_DESKTOP=labwc:wlroots",
+            "MOZ_ENABLE_WAYLAND=1",
+        ]
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
         s.connect(sock_path)
         try:
@@ -93,11 +99,7 @@ def authenticate_greetd(username: str, password: str, session_cmd: list[str]) ->
                 {
                     "type": "start_session",
                     "cmd": session_cmd,
-                    "env": [
-                        "XDG_SESSION_TYPE=wayland",
-                        "XDG_CURRENT_DESKTOP=labwc:wlroots",
-                        "MOZ_ENABLE_WAYLAND=1",
-                    ],
+                    "env": session_env,
                 },
             )
             if start_resp.get("type") == "success":
@@ -111,6 +113,41 @@ def authenticate_greetd(username: str, password: str, session_cmd: list[str]) ->
             except Exception:
                 pass
             return False, str(exc)
+
+
+def run_auth_stdio() -> int:
+    """Authenticate a single JSON request over stdin without GTK initialization."""
+    try:
+        raw_line = sys.stdin.readline()
+        if not raw_line:
+            print(json.dumps({"ok": False, "message": "Empty auth request"}), flush=True)
+            return 1
+        req = json.loads(raw_line)
+        username = str(req.get("user") or "").strip()
+        password = str(req.get("password") or "")
+        cmd = list(req.get("cmd") or ["/usr/bin/transformer-session"])
+        env = req.get("env")
+        if env is not None:
+            env = [str(x) for x in env]
+        if not username or not password:
+            print(json.dumps({"ok": False, "message": "Username and password required"}), flush=True)
+            return 1
+        ok, msg = authenticate_greetd(username, password, cmd, env)
+        print(json.dumps({"ok": ok, "message": msg}), flush=True)
+        return 0 if ok else 1
+    except Exception as exc:
+        print(json.dumps({"ok": False, "message": str(exc)}), flush=True)
+        return 1
+
+
+if "--auth-stdio" in sys.argv:
+    if __name__ == "__main__":
+        sys.exit(run_auth_stdio())
+
+import gi
+gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
+from gi.repository import Gdk, GLib, Gtk
 
 
 CSS = """

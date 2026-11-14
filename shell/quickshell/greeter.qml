@@ -1,7 +1,6 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import Quickshell.Services.Greetd
 
 ShellRoot {
     id: greeterRoot
@@ -79,45 +78,69 @@ ShellRoot {
         }
         busy = true;
         statusMessage = "Signing in...";
-        Greetd.createSession(selectedUser);
+        authProc.handledResult = false;
+        authProc.pendingPayload = JSON.stringify({
+            user: selectedUser,
+            password: passwordText,
+            cmd: ["/usr/bin/transformer-session"],
+            env: [
+                "XDG_SESSION_TYPE=wayland",
+                "XDG_CURRENT_DESKTOP=labwc:wlroots",
+                "MOZ_ENABLE_WAYLAND=1",
+                "QT_QPA_PLATFORM=wayland",
+                "LIBVA_DRIVER_NAME=i965",
+                "XKB_DEFAULT_LAYOUT=it"
+            ]
+        }) + "\n";
+        authProc.running = true;
     }
 
-    Connections {
-        target: Greetd
+    Process {
+        id: authProc
+        property string pendingPayload: ""
+        property bool handledResult: false
 
-        function onAuthMessage(message, error, responseRequired, responseVisible) {
-            if (responseRequired) {
-                Greetd.respond(greeterRoot.passwordText);
-            } else if (error && message.length > 0) {
-                greeterRoot.statusMessage = message;
+        command: ["/usr/bin/transformer-greeter", "--auth-stdio"]
+        stdinEnabled: true
+
+        onStarted: {
+            if (pendingPayload.length > 0) {
+                authProc.write(pendingPayload);
+                pendingPayload = "";
             }
         }
 
-        function onReadyToLaunch() {
-            Greetd.launch(
-                ["/usr/bin/transformer-session"],
-                [
-                    "XDG_SESSION_TYPE=wayland",
-                    "XDG_CURRENT_DESKTOP=labwc:wlroots",
-                    "MOZ_ENABLE_WAYLAND=1",
-                    "QT_QPA_PLATFORM=wayland",
-                    "LIBVA_DRIVER_NAME=i965"
-                ]
-            );
+        stdout: SplitParser {
+            onRead: line => {
+                const trimmed = line.trim();
+                if (trimmed.length === 0) return;
+                authProc.handledResult = true;
+                try {
+                    const res = JSON.parse(trimmed);
+                    if (res.ok) {
+                        greeterRoot.statusMessage = "";
+                        Qt.quit();
+                        return;
+                    }
+                    greeterRoot.busy = false;
+                    greeterRoot.passwordText = "";
+                    greeterRoot.statusMessage = res.message || "Incorrect password";
+                } catch (e) {
+                    greeterRoot.busy = false;
+                    greeterRoot.passwordText = "";
+                    greeterRoot.statusMessage = "Authentication response error";
+                }
+                if (greeterRoot.docked) pwInput.forceActiveFocus();
+            }
         }
 
-        function onAuthFailure(message) {
-            Greetd.cancelSession();
-            greeterRoot.busy = false;
-            greeterRoot.passwordText = "";
-            greeterRoot.statusMessage = message && message.length > 0 ? message : "Incorrect password";
-            if (greeterRoot.docked) pwInput.forceActiveFocus();
-        }
-
-        function onError(err) {
-            greeterRoot.busy = false;
-            greeterRoot.passwordText = "";
-            greeterRoot.statusMessage = err || "Authentication failed";
+        onExited: (exitCode, exitStatus) => {
+            if (!authProc.handledResult) {
+                greeterRoot.busy = false;
+                greeterRoot.passwordText = "";
+                greeterRoot.statusMessage = "Authentication failed (code " + exitCode + ")";
+                if (greeterRoot.docked) pwInput.forceActiveFocus();
+            }
         }
     }
 
@@ -251,6 +274,7 @@ ShellRoot {
                                 text: greeterRoot.passwordText
                                 onTextChanged: greeterRoot.passwordText = text
                                 Keys.onReturnPressed: greeterRoot.submitLogin()
+                                Keys.onEnterPressed: greeterRoot.submitLogin()
 
                                 Component.onCompleted: forceActiveFocus()
                             }
