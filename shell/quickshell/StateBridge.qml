@@ -29,6 +29,7 @@ Scope {
 
     property bool quickSettingsOpen: false
     property bool appGridOpen: false
+    property string appGridCategory: "All"
     property bool recentsOpen: false
     property bool lockRequested: false
     property var notificationHistory: []

@@ -24,7 +24,10 @@
 4. **Adaptive Dock-Aware Login & Lock Screen (`transformer-greeter`)**:
    - Speaks native `greetd` IPC.
    - Displays a classic keyboard-driven password prompt when docked, and automatically expands an integrated touch keypad when undocked.
-5. **Simple One-Tap Updates & Instant Rollback**:
+5. **Unified Package Manager (`transformer-store`) & Mutable `dnf5` Support**:
+   - Supports **Fedora 45 RPM packages (`dnf5`)**, **Flatpaks (`Flathub`)**, and **AppImages** (`~/Applications` + automatic `.desktop` & icon integration) in a single lightweight GTK4 UI.
+   - Unlocks `/usr` with a deployment-scoped disk-backed overlay (`transformeros-usr-unlock.service`) and configures `dnf5` so `sudo dnf install <pkg>` works out of the box without `bootc` read-only errors.
+6. **Simple One-Tap Updates & Instant Rollback**:
    - Powered by `bootc` + GitHub Container Registry (`ghcr.io/piernik-cpu/transformeros:stable`).
    - Background updates are staged automatically without unexpected reboots; previous deployment stays selectable in the boot menu (or via the **Roll Back** button in Quick Settings).
 
@@ -38,10 +41,10 @@ TransformerOS/
 ├── Justfile                      # Build, verify, and QEMU IA32 UEFI test commands
 ├── .github/workflows/build.yml   # CI/CD: builds & publishes to GHCR on push and weekly schedule
 ├── transformerd/                 # Rust hardware, dock/tablet mode, sensor, power & update daemon
-├── shell/                        # Adaptive greeter, Android bottom nav, Quick Settings, App Grid, labwc, waybar
+├── shell/                        # Quickshell adaptive shell, greeter, lock screen, store & labwc configs
 ├── system/                       # System-level configs (/usr/lib/dracut, kargs.d, sysctl.d, tmpfiles.d, udev)
 ├── firmware/brcm/                # BCM4324B3.hcd & brcmfmac43241b4-sdio.txt
-├── scripts/                      # T100TAS installer (microSD-safe) & mitigations benchmark
-├── tests/                        # Container inspection & QEMU Silvermont/IA32 verification
-└── t100tas-handoff/              # Hardware profile, live telemetry snapshot, and initial Debian fixes
+├── scripts/                      # T100TAS installer (microSD-safe) & live hotfix sync script
+├── docs/                         # Architecture, installation, and recovery documentation
+└── tests/                        # QEMU Silvermont / 32-bit IA32 UEFI boot verification
 ```

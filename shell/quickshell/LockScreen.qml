@@ -18,6 +18,33 @@ Scope {
         precision: SystemClock.Minutes
     }
 
+    Timer {
+        id: verifyTimeout
+        interval: 8000
+        repeat: false
+        onTriggered: {
+            if (lockScope.verifying) {
+                if (pam.active) pam.abort();
+                lockScope.verifying = false;
+                lockScope.passwordText = "";
+                lockScope.errorText = "Authentication timed out — try again";
+            }
+        }
+    }
+
+    Connections {
+        target: StateBridge
+        function onLockRequestedChanged() {
+            verifyTimeout.stop();
+            if (pam.active) {
+                pam.abort();
+            }
+            lockScope.verifying = false;
+            lockScope.passwordText = "";
+            lockScope.errorText = "";
+        }
+    }
+
     function submitPassword() {
         if (verifying) return;
         if (passwordText.length === 0) {
@@ -26,7 +53,12 @@ Scope {
         }
         verifying = true;
         errorText = "Verifying...";
+        verifyTimeout.restart();
+        if (pam.active) {
+            pam.abort();
+        }
         if (!pam.start()) {
+            verifyTimeout.stop();
             verifying = false;
             errorText = "Unable to start PAM authentication";
         }
@@ -37,15 +69,16 @@ Scope {
         config: "system-auth"
         user: lockScope.userName
 
-        onPamMessage: (msg, isError, responseRequired, responseVisible) => {
-            if (responseRequired) {
+        onPamMessage: {
+            if (pam.responseRequired) {
                 pam.respond(lockScope.passwordText);
-            } else if (isError && msg.length > 0) {
-                lockScope.errorText = msg;
+            } else if (pam.messageIsError && pam.message.length > 0) {
+                lockScope.errorText = pam.message;
             }
         }
 
         onCompleted: result => {
+            verifyTimeout.stop();
             lockScope.verifying = false;
             if (result === PamResult.Success) {
                 lockScope.passwordText = "";
@@ -58,6 +91,7 @@ Scope {
         }
 
         onError: err => {
+            verifyTimeout.stop();
             lockScope.verifying = false;
             lockScope.passwordText = "";
             lockScope.errorText = "Authentication error (" + PamError.toString(err) + ")";
@@ -164,6 +198,7 @@ Scope {
                                     text: lockScope.passwordText
                                     onTextChanged: lockScope.passwordText = text
                                     Keys.onReturnPressed: lockScope.submitPassword()
+                                    Keys.onEnterPressed: lockScope.submitPassword()
 
                                     Component.onCompleted: forceActiveFocus()
                                 }

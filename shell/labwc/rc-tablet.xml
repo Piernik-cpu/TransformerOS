@@ -27,7 +27,9 @@
   </libinput>
   <keyboard>
     <default />
-    <keybind key="Super_L"><action name="Execute" command="/usr/bin/transformer-shell appgrid" /></keybind>
+    <keybind key="Super_L" onRelease="yes"><action name="Execute" command="/usr/bin/transformer-shell appgrid" /></keybind>
+    <keybind key="Super_R" onRelease="yes"><action name="Execute" command="/usr/bin/transformer-shell appgrid" /></keybind>
+    <keybind key="XF86HomePage"><action name="Execute" command="/usr/bin/transformer-shell appgrid" /></keybind>
     <keybind key="W-d"><action name="Execute" command="/usr/bin/transformer-shell appgrid" /></keybind>
     <keybind key="W-space"><action name="Execute" command="/usr/bin/transformer-shell appgrid" /></keybind>
     <keybind key="W-Tab"><action name="Execute" command="/usr/bin/transformer-shell recents" /></keybind>

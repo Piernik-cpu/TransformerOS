@@ -2,7 +2,8 @@
 # TransformerOS Session Autostart
 
 # Export Wayland environment to systemd/D-Bus so xdg-desktop-portal starts cleanly
-dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP MOZ_ENABLE_WAYLAND QT_QPA_PLATFORM LIBVA_DRIVER_NAME >/dev/null 2>&1 || true
+systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE MOZ_ENABLE_WAYLAND QT_QPA_PLATFORM GDK_BACKEND LIBVA_DRIVER_NAME >/dev/null 2>&1 || true
+systemctl --user start xdg-desktop-portal.service >/dev/null 2>&1 &
 
 # Background wallpaper (solid deep slate for zero VRAM overhead)
 swaybg -c '#0f1624' >/dev/null 2>&1 &
@@ -13,11 +14,13 @@ transformerd daemon >/dev/null 2>&1 &
 # Persistent Quickshell desktop shell (TopBar, QuickSettings, AppGrid, BottomNav, Polkit, Notifications, WlSessionLock)
 quickshell -c transformeros >/dev/null 2>&1 &
 
-# Idle management: dim/blank screen after 5m, lock after 10m
-swayidle -w \
-    timeout 300 'wlopm --off \*' \
-    resume 'wlopm --on \*' \
-    timeout 600 '/usr/bin/transformer-shell lock' >/dev/null 2>&1 &
+# Idle management: dim/blank screen after 5m, lock after 10m (unless disabled for remote debugging)
+if [ ! -f /etc/systemd/logind.conf.d/99-no-suspend-debug.conf ] && [ ! -f "$HOME/.config/transformeros/no-idle" ]; then
+    swayidle -w \
+        timeout 300 'wlopm --off \*' \
+        resume 'wlopm --on \*' \
+        timeout 600 '/usr/bin/transformer-shell lock' >/dev/null 2>&1 &
+fi
 
 # Optional user customization hook
 if [ -x "$HOME/.config/transformeros/custom-autostart.sh" ]; then

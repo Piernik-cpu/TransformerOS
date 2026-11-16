@@ -17,15 +17,23 @@ verify:
         echo "--- bootc lint ---"; \
         bootc container lint || true; \
         echo "--- Kernel & IA32 EFI ---"; \
-        rpm -q kernel-core shim-ia32 grub2-efi-ia32 labwc quickshell; \
+        rpm -q kernel-core shim-ia32 grub2-efi-ia32 labwc quickshell fastfetch fuse fuse-libs; \
         find /usr/lib/efi /usr/lib/bootupd/updates /usr/share/transformeros -iname "*ia32*.efi"; \
         echo "--- Firmware & Prefs ---"; \
         ls -la /usr/lib/firmware/brcm/BCM4324B3.hcd "/usr/lib/firmware/brcm/brcmfmac43241b4-sdio.txt" "/usr/lib/firmware/brcm/brcmfmac43241b4-sdio.ASUSTeK COMPUTER INC.-T100TAS.txt" /usr/lib64/firefox/browser/defaults/preferences/99-t100tas-prefs.js; \
-        echo "--- Binaries ---"; \
+        echo "--- Binaries & Desktop Hygiene ---"; \
         /usr/bin/transformerd status; \
         /usr/bin/t100-window-ctl --help; \
-        python3 -m py_compile /usr/bin/transformer-greeter; \
-        bash -n /usr/bin/transformer-session /usr/bin/transformer-greeter-session /usr/bin/transformer-shell; \
+        /usr/bin/transformer-store --help; \
+        fastfetch --version; \
+        python3 -m py_compile /usr/bin/transformer-greeter /usr/bin/transformer-store; \
+        bash -n /usr/bin/transformer-session /usr/bin/transformer-greeter-session /usr/bin/transformer-shell /usr/bin/transformer-pkg-helper; \
+        grep -q "NoDisplay=true" /usr/share/applications/blueman-adapters.desktop; \
+        grep -q "NoDisplay=true" /usr/share/applications/pcmanfm-desktop-pref.desktop; \
+        grep -q "NoDisplay=true" /usr/share/applications/foot-server.desktop; \
+        grep -q "NoDisplay=true" /usr/share/applications/footclient.desktop; \
+        grep -q "Super_L.*onRelease=\"yes\"" /usr/share/transformeros/labwc/rc-docked.xml; \
+        grep -q "Super_L.*onRelease=\"yes\"" /usr/share/transformeros/labwc/rc-tablet.xml; \
         echo "--- Headless Labwc & Quickshell Verify ---"; \
         export XDG_RUNTIME_DIR=/tmp/t100-verify-rt; \
         mkdir -p "$XDG_RUNTIME_DIR"; chmod 700 "$XDG_RUNTIME_DIR"; \
@@ -45,6 +53,12 @@ verify:
         sleep 0.4; \
         quickshell ipc -c transformeros call shell toggleAppGrid; \
         sleep 0.4; \
+        quickshell ipc -c transformeros call shell setAppGridCategory Internet; \
+        sleep 0.3; \
+        quickshell ipc -c transformeros call shell setAppGridCategory System; \
+        sleep 0.3; \
+        quickshell ipc -c transformeros call shell setAppGridCategory All; \
+        sleep 0.3; \
         quickshell ipc -c transformeros call shell toggleRecents; \
         sleep 0.4; \
         kill "$QS_PID" 2>/dev/null || true; wait "$QS_PID" 2>/dev/null || true; \

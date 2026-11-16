@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export LANG="${LANG:-C.UTF-8}"
 export XDG_SESSION_TYPE=wayland
 export XDG_CURRENT_DESKTOP=labwc:wlroots
 export MOZ_ENABLE_WAYLAND=1
@@ -23,10 +24,8 @@ if [ -d "$SYS_LABWC" ]; then
         fi
     done
     chmod +x "$HOME/.config/labwc/autostart" 2>/dev/null || true
-    if [ ! -f "$HOME/.config/labwc/rc.xml" ] || [ ! -f "$STAMP_FILE" ]; then
-        cp -a "$HOME/.config/labwc/rc-docked.xml" "$HOME/.config/labwc/rc.xml"
-        date -Is > "$STAMP_FILE"
-    fi
+    cp -a "$HOME/.config/labwc/rc-docked.xml" "$HOME/.config/labwc/rc.xml"
+    date -Is > "$STAMP_FILE"
 fi
 
 exec labwc

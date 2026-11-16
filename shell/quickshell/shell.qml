@@ -23,6 +23,10 @@ ShellRoot {
             StateBridge.toggleAppGrid();
         }
 
+        function setAppGridCategory(cat: string) {
+            StateBridge.appGridCategory = cat;
+        }
+
         function toggleRecents() {
             StateBridge.toggleRecents();
         }
@@ -34,6 +38,10 @@ ShellRoot {
         function lock() {
             StateBridge.closePopups();
             StateBridge.lockRequested = true;
+        }
+
+        function unlock() {
+            StateBridge.lockRequested = false;
         }
     }
 }

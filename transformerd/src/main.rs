@@ -468,26 +468,62 @@ fn toggle_osk() -> bool {
 }
 
 fn has_bluetooth_powered() -> bool {
+    let mut rfkill_unblocked = true;
     if let Ok(entries) = fs::read_dir("/sys/class/rfkill") {
-        let mut saw_bt = false;
         for entry in entries.flatten() {
             let p = entry.path();
             if read_trimmed(&p.join("type")).as_deref() == Some("bluetooth") {
-                saw_bt = true;
                 let soft = read_trimmed(&p.join("soft")).unwrap_or_default();
                 let hard = read_trimmed(&p.join("hard")).unwrap_or_default();
-                if soft == "0" && hard == "0" {
-                    return true;
+                if soft != "0" || hard != "0" {
+                    rfkill_unblocked = false;
                 }
             }
         }
-        if saw_bt {
-            return false;
+    }
+    if !rfkill_unblocked {
+        return false;
+    }
+    if let Ok(out) = Command::new("bluetoothctl").arg("show").output() {
+        if out.status.success() {
+            let s = String::from_utf8_lossy(&out.stdout);
+            for line in s.lines() {
+                let t = line.trim();
+                if let Some(rest) = t.strip_prefix("Powered:") {
+                    return rest.trim() == "yes";
+                }
+            }
         }
     }
     fs::read_dir("/sys/class/bluetooth")
         .map(|mut d| d.next().is_some())
         .unwrap_or(false)
+}
+
+fn set_bluetooth_powered(enable: bool) {
+    if enable {
+        let _ = Command::new("rfkill")
+            .args(["unblock", "bluetooth"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+        let _ = Command::new("bluetoothctl")
+            .args(["power", "on"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    } else {
+        let _ = Command::new("bluetoothctl")
+            .args(["power", "off"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+        let _ = Command::new("rfkill")
+            .args(["block", "bluetooth"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
 }
 
 fn apply_labwc_mode(mode: &str) {
@@ -675,6 +711,7 @@ fn run_daemon() {
     spawn_sensor_proxy_reader(Arc::clone(&sensor_cache));
 
     let mut prev_mode = String::new();
+    let mut prev_hw_docked: Option<bool> = None;
     let mut prev_orient = "normal".to_string();
     let mut prev_power = String::new();
     let mut prev_brightness: u32 = get_backlight_pct();
@@ -685,6 +722,15 @@ fn run_daemon() {
 
     loop {
         let mut cfg = load_config();
+        let hw_docked = has_dock() || has_keyboard();
+        if let Some(prev_hw) = prev_hw_docked {
+            if hw_docked != prev_hw && cfg.mode_override != "auto" {
+                cfg.mode_override = "auto".to_string();
+                save_config(&cfg);
+            }
+        }
+        prev_hw_docked = Some(hw_docked);
+
         let (proxy_orient, proxy_lux) = if let Ok(guard) = sensor_cache.lock() {
             (guard.orientation.clone(), guard.lux)
         } else {
@@ -820,11 +866,17 @@ fn handle_update_cmd(action: &str) {
         "check" => {
             let _ = fs::write(&status_path, "checking\n");
             notify("System Update", "Checking for TransformerOS image updates...");
-            let out = Command::new("bootc").args(["upgrade", "--check"]).output();
+            let out = Command::new("pkexec")
+                .args(["bootc", "upgrade", "--check"])
+                .output();
             match out {
                 Ok(o) if o.status.success() => {
                     let stdout = String::from_utf8_lossy(&o.stdout);
-                    if stdout.contains("No changes") || stdout.trim().is_empty() {
+                    let stderr = String::from_utf8_lossy(&o.stderr);
+                    if stdout.contains("No changes")
+                        || stderr.contains("No changes")
+                        || (stdout.trim().is_empty() && stderr.trim().is_empty())
+                    {
                         let _ = fs::write(&status_path, "up-to-date\n");
                         notify("TransformerOS is Up to Date", "Running the latest atomic image.");
                     } else {
@@ -892,21 +944,44 @@ fn main() {
         "mode" => {
             let mut cfg = load_config();
             let cur = compute_state(&cfg, "normal", 80.0);
+            let hw_mode = if cur.dock_attached || cur.keyboard_attached {
+                "docked"
+            } else {
+                "tablet"
+            };
             cfg.mode_override = match sub {
                 "auto" => "auto".to_string(),
                 "docked" | "laptop" => "docked".to_string(),
                 "tablet" => "tablet".to_string(),
                 _ => {
-                    if cur.effective_mode == "tablet" {
-                        "docked".to_string()
+                    let target = if cur.effective_mode == "tablet" {
+                        "docked"
                     } else {
-                        "tablet".to_string()
+                        "tablet"
+                    };
+                    if target == hw_mode {
+                        "auto".to_string()
+                    } else {
+                        target.to_string()
                     }
                 }
             };
             save_config(&cfg);
             let next = compute_state(&cfg, "normal", 80.0);
             apply_labwc_mode(&next.effective_mode);
+            write_state(&next);
+        }
+        "bluetooth" => {
+            let cur = has_bluetooth_powered();
+            let target = match sub {
+                "on" | "enable" => true,
+                "off" | "disable" => false,
+                _ => !cur,
+            };
+            set_bluetooth_powered(target);
+            let cfg = load_config();
+            let mut next = compute_state(&cfg, "normal", read_ambient_lux().unwrap_or(80.0));
+            next.bt_powered = target;
             write_state(&next);
         }
         "rotate" => {

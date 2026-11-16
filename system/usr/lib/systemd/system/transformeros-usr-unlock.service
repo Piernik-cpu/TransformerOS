@@ -1,0 +1,14 @@
+[Unit]
+Description=TransformerOS Persistent Disk-Backed /usr Overlay & Flathub Setup
+DefaultDependencies=no
+After=local-fs.target var.mount
+Before=systemd-tmpfiles-setup.service sysinit.target multi-user.target greetd.service
+ConditionPathExists=/run/ostree-booted
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'if [ -x /var/lib/transformeros/bin/transformer-pkg-helper ]; then exec /var/lib/transformeros/bin/transformer-pkg-helper unlock; else exec /usr/bin/transformer-pkg-helper unlock; fi'
+
+[Install]
+WantedBy=sysinit.target multi-user.target

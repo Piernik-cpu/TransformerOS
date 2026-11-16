@@ -45,8 +45,9 @@ Scope {
 
         Keys.onEscapePressed: StateBridge.quickSettingsOpen = false
 
-        TapHandler {
-            onTapped: StateBridge.quickSettingsOpen = false
+        MouseArea {
+            anchors.fill: parent
+            onClicked: StateBridge.quickSettingsOpen = false
         }
 
         Rectangle {
@@ -63,7 +64,10 @@ Scope {
             border.color: Theme.borderSubtle
 
             // Prevent backdrop tap from closing drawer when tapping non-button areas inside card
-            TapHandler {}
+            MouseArea {
+                anchors.fill: parent
+                onPressed: mouse => { mouse.accepted = true; }
+            }
 
             Flickable {
                 anchors.fill: parent
@@ -344,6 +348,13 @@ Scope {
                             border.width: 1
                             border.color: Networking.wifiEnabled ? Theme.accent : Theme.borderSubtle
 
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    Quickshell.execDetached(["nmcli", "radio", "wifi", Networking.wifiEnabled ? "off" : "on"]);
+                                }
+                            }
+
                             Row {
                                 anchors.fill: parent
                                 anchors.margins: 10
@@ -378,18 +389,13 @@ Scope {
                                         color: Theme.textPrimary
                                         font.pixelSize: 14
                                     }
-                                    TapHandler {
-                                        onTapped: {
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        onClicked: {
                                             Quickshell.execDetached(["nm-connection-editor"]);
                                             StateBridge.quickSettingsOpen = false;
                                         }
                                     }
-                                }
-                            }
-
-                            TapHandler {
-                                onTapped: {
-                                    Quickshell.execDetached(["nmcli", "radio", "wifi", Networking.wifiEnabled ? "off" : "on"]);
                                 }
                             }
                         }
@@ -402,6 +408,15 @@ Scope {
                             color: StateBridge.btPowered ? "#1c3c5e" : Theme.bgTile
                             border.width: 1
                             border.color: Theme.borderSubtle
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    const nxt = !StateBridge.btPowered;
+                                    StateBridge.btPowered = nxt;
+                                    StateBridge.runDaemonCmd(["bluetooth", nxt ? "on" : "off"]);
+                                }
+                            }
 
                             Row {
                                 anchors.fill: parent
@@ -437,20 +452,13 @@ Scope {
                                         color: Theme.textPrimary
                                         font.pixelSize: 14
                                     }
-                                    TapHandler {
-                                        onTapped: {
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        onClicked: {
                                             Quickshell.execDetached(["blueman-manager"]);
                                             StateBridge.quickSettingsOpen = false;
                                         }
                                     }
-                                }
-                            }
-
-                            TapHandler {
-                                onTapped: {
-                                    const nxt = !StateBridge.btPowered;
-                                    StateBridge.btPowered = nxt;
-                                    Quickshell.execDetached(["bluetoothctl", "power", nxt ? "on" : "off"]);
                                 }
                             }
                         }

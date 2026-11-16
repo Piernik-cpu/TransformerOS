@@ -27,8 +27,9 @@ Scope {
 
                     Keys.onEscapePressed: StateBridge.recentsOpen = false
 
-                    TapHandler {
-                        onTapped: StateBridge.recentsOpen = false
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: StateBridge.recentsOpen = false
                     }
 
                     Column {
@@ -143,8 +144,9 @@ Scope {
                                         border.width: modelData.activated ? 2 : 1
                                         border.color: modelData.activated ? Theme.accentBright : Theme.borderSubtle
 
-                                        TapHandler {
-                                            onTapped: {
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            onClicked: {
                                                 if (winCard.modelData) winCard.modelData.activate();
                                                 StateBridge.recentsOpen = false;
                                             }
@@ -205,7 +207,7 @@ Scope {
                                                     width: 38
                                                     height: 38
                                                     radius: 10
-                                                    color: closeCardTap.pressed ? Theme.danger : "#3a2330"
+                                                    color: closeCardArea.pressed ? Theme.danger : "#3a2330"
 
                                                     Text {
                                                         anchors.centerIn: parent
@@ -215,9 +217,10 @@ Scope {
                                                         font.weight: Font.Bold
                                                     }
 
-                                                    TapHandler {
-                                                        id: closeCardTap
-                                                        onTapped: {
+                                                    MouseArea {
+                                                        id: closeCardArea
+                                                        anchors.fill: parent
+                                                        onClicked: {
                                                             if (winCard.modelData) winCard.modelData.close();
                                                         }
                                                     }

@@ -1,8 +1,8 @@
 # ASUS Base Station T100 dock (0b05:17e0): keep USB autosuspend off on dock hub
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0b05", ATTR{idProduct}=="17e0", ATTR{power/control}="on", TAG+="systemd"
 
-# Allow video group / active seat user (uaccess) to adjust backlight cleanly
-ACTION=="add", SUBSYSTEM=="backlight", KERNEL=="intel_backlight|acpi_video*", TAG+="uaccess", RUN+="/bin/chgrp video /sys/class/backlight/%k/brightness", RUN+="/bin/chmod g+w /sys/class/backlight/%k/brightness"
+# Allow active user and transformerd to adjust backlight cleanly
+ACTION=="add|change", SUBSYSTEM=="backlight", KERNEL=="intel_backlight|acpi_video*", TAG+="uaccess", RUN+="/bin/chgrp video /sys/class/backlight/%k/brightness", RUN+="/bin/chmod 0666 /sys/class/backlight/%k/brightness"
 
 # Nintendo GameCube controller adapter (preserved from T100TAS user setup)
 SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="0337", MODE="0666"

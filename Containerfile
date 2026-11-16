@@ -131,6 +131,10 @@ RUN dnf5 install -y --setopt=ip_resolve=ipv4 --setopt=install_weak_deps=False \
         shadow-utils \
         firefox \
         flatpak \
+        fastfetch \
+        fuse \
+        fuse-libs \
+        desktop-file-utils \
         fontconfig \
         google-noto-sans-fonts && \
     (dnf5 install -y --setopt=ip_resolve=ipv4 --setopt=install_weak_deps=False intel-vaapi-driver || \
@@ -151,14 +155,15 @@ COPY bootia32.efi /usr/share/transformeros/boot/bootia32.efi
 # 4. Install system configurations (dracut, kargs.d, zram, sysctl, tmpfiles, udev, systemd, greetd, polkit)
 COPY system/ /
 
-# 5. Install TransformerOS Shell, Adaptive Greeter, Lock Screen, Labwc & Waybar configs
+# 5. Install TransformerOS Quickshell UI, Adaptive Greeter, Package Manager & Labwc configs
 COPY shell/transformer-greeter.py /usr/bin/transformer-greeter
 COPY shell/transformer-greeter-session.sh /usr/bin/transformer-greeter-session
 COPY shell/transformer-shell-ipc.sh /usr/bin/transformer-shell
 COPY shell/transformer-session.sh /usr/bin/transformer-session
+COPY shell/transformer-pkg-helper.sh /usr/bin/transformer-pkg-helper
+COPY shell/transformer-store.py /usr/bin/transformer-store
 COPY shell/labwc/ /usr/share/transformeros/labwc/
 COPY shell/labwc/ /etc/skel/.config/labwc/
-COPY shell/waybar/ /etc/skel/.config/waybar/
 COPY shell/quickshell/ /etc/xdg/quickshell/transformeros/
 COPY shell/firefox/t100tas-prefs.js /usr/lib64/firefox/browser/defaults/preferences/99-t100tas-prefs.js
 
@@ -170,14 +175,40 @@ RUN chmod 0755 \
         /usr/bin/transformer-greeter-session \
         /usr/bin/transformer-shell \
         /usr/bin/transformer-session \
+        /usr/bin/transformer-pkg-helper \
+        /usr/bin/transformer-store \
         /usr/share/transformeros/labwc/autostart \
         /etc/skel/.config/labwc/autostart && \
+    mkdir -p /var/lib/transformeros/bin && \
+    cp -a /usr/bin/transformer-pkg-helper /var/lib/transformeros/bin/transformer-pkg-helper && \
+    cp -a /usr/bin/transformer-store /var/lib/transformeros/bin/transformer-store && \
     cp -a /usr/share/transformeros/labwc/rc-docked.xml /usr/share/transformeros/labwc/rc.xml && \
     cp -a /etc/skel/.config/labwc/rc-docked.xml /etc/skel/.config/labwc/rc.xml && \
+    # Hide redundant/unsupported desktop launchers (Bluetooth Adapters is inside Bluetooth Manager;
+    # PCManFM Desktop Preferences requires X11 desktop manager not active under Wayland labwc;
+    # Foot Server & Foot Client are daemon/client helpers duplicate to Foot terminal)
+    for df in /usr/share/applications/blueman-adapters.desktop \
+              /usr/share/applications/pcmanfm-desktop-pref.desktop \
+              /usr/share/applications/foot-server.desktop \
+              /usr/share/applications/footclient.desktop; do \
+        if [ -f "$df" ]; then \
+            sed -i '/^NoDisplay=/d' "$df"; \
+            printf '\nNoDisplay=true\n' >> "$df"; \
+        fi; \
+    done && \
+    printf 'LANG="C.UTF-8"\n' > /etc/locale.conf && \
+    systemctl --global mask \
+        waybar.service \
+        mako.service \
+        kanshi.service \
+        foot-server.service \
+        foot-server.socket 2>/dev/null || true && \
+    # Pre-configure Flathub remote for Flatpak
+    flatpak remote-add --if-not-exists --system flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true && \
     # Ensure greetd greeter user has video/input group access for Wayland DRM + touch + backlight
     (getent passwd greetd >/dev/null || useradd -r -M -d /var/lib/greetd -s /sbin/nologin greetd) && \
     usermod -aG video,input greetd || true && \
-    # Enable core services and microSD automount
+    # Enable core services, persistent /usr unlock, and microSD automount
     systemctl enable \
         greetd.service \
         earlyoom.service \
@@ -188,6 +219,7 @@ RUN chmod 0755 \
         sshd.service \
         fstrim.timer \
         var-mnt-EXTRA.mount \
+        transformeros-usr-unlock.service \
         transformeros-auto-update.timer && \
     systemctl disable \
         NetworkManager-wait-online.service \
